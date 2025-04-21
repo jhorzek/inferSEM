@@ -1,0 +1,151 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+library(inferSEM)
+library(mxsem)
+```
+
+# inferSEM
+
+<!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
+
+inferSEM is an experimental R package for inference on structural equation models
+fitted with OpenMx. The objective is to apply the same ideas used in Bayesian networks
+for inference in SEM.
+
+inferSEM currently only has one user facing function: `infer`. This function allows
+computing the interventional and conditional distributions of SEMs. However,
+it is not really tested yet and the implementation could be wrong. This is just a 
+small experiment package. For a thorough introduction to interventional and 
+conditional distributions in SEM, please see Gische et al. (2021).
+
+The interventional distribution is computed as follows: Say we intervene by setting
+the value of the variable x2 to 1. In that case:
+
+1. The RAM matrices are extracted from the SEM
+2. The SEM is "mutilated" - a term used in Bayesian networks (see Scutari, 2010) to describe the removal
+of any effects on the intervention variable (x2 in our case). In SEM this also includes 
+the removal of covariances between x2 and any other variable in the model
+3. The computation of the model implied means and covariances based on the mutilated SEM
+
+The conditional distribution is computed using the R package condMVNorm. If interventional
+and conditional distribution are combined, inferSEM first computes the interventional
+distribution and then conditions on the additional evidence.
+
+## Installation
+
+You can install the development version of inferSEM as follows:
+
+``` r
+if(!require("remotes"))
+install.packages("remotes")
+remotes::install_github("jhorzek/inferSEM")
+```
+
+## Example
+
+In the following, we will use the R package mxsem to create the OpenMx model.
+
+```{r example}
+library(inferSEM)
+library(mxsem)
+# The following model is based on the documentation of sem in lavaan:
+model <- ' 
+  # latent variable definitions
+     ind60 =~ x1 + x2 + x3
+     dem60 =~ y1 + a*y2 + b*y3 + c*y4
+     dem65 =~ y5 + a*y6 + b*y7 + c*y8
+
+  # regressions
+    dem60 ~ ind60
+    dem65 ~ ind60 + dem60
+
+  # residual correlations
+    y1 ~~ y5
+    y2 ~~ y4 + y6
+    y3 ~~ y7
+    y4 ~~ y8
+    y6 ~~ y8
+'
+
+fit <- mxsem(model = model,
+             data  = OpenMx::Bollen) |>
+  mxTryHard()
+```
+
+First, let's have a look at the unconditional means and covariances of the latent
+variables:
+```{r}
+unconditional <- inferSEM::infer(model = fit)
+# For simplicity, let's just look at the latent variables:
+round(unconditional$means[,c("ind60", "dem60", "dem65")], 2)
+round(unconditional$covariances[c("ind60", "dem60", "dem65"),
+                                c("ind60", "dem60", "dem65")], 2)
+```
+
+Now, let's assume we are interested in the distribution of our variables given
+that we intervene on dem60 with do(dem60 = 3). We can get the interventional distribution
+as follows:
+
+```{r}
+interventional <- inferSEM::infer(model = fit,
+                                  intervene = c("dem60" = 3))
+# For simplicity, let's just look at the latent variables:
+round(interventional$means[,c("ind60", "dem60", "dem65")], 2)
+round(interventional$covariances[c("ind60", "dem60", "dem65"),
+                                 c("ind60", "dem60", "dem65")], 2)
+```
+In contrast, if we just observed dem60 with observe(dem60 = 3), we get:
+
+```{r}
+conditional <- inferSEM::infer(model = fit,
+                               observe = c("dem60" = 3))
+# For simplicity, let's just look at the latent variables:
+round(conditional$means[,c("ind60", "dem65")], 2)
+round(conditional$covariances[c("ind60", "dem65"),
+                              c("ind60", "dem65")], 2)
+```
+Note that dem60 is no longer included in the output because we are conditioning on
+it.
+
+We can also plot the distributions:
+
+```{r}
+x <- seq(0, 5, by = .01)
+interventional_dem65 <- dnorm(x = x,
+                              mean = interventional$means[,"dem65"],
+                              sd = sqrt(interventional$covariances["dem65", "dem65"]))
+conditional_dem65 <- dnorm(x = x,
+                           mean = conditional$means[,"dem65"],
+                           sd = sqrt(conditional$covariances["dem65", "dem65"]))
+plot(x = x, 
+     y = interventional_dem65, 
+     type = "l",
+     col = "red",
+     xlab = "dem65",
+     ylab = "Density")
+lines(x = x, 
+      y = conditional_dem65,
+      col = "blue")
+```
+
+
+## References
+
+- Gische, C., West, S. G., & Voelkle, M. C. (2021). Forecasting causal effects
+of interventions versus predicting future outcomes. Structural Equation Modeling:
+A Multidisciplinary Journal, 28(3), 475-492.
+- Scutari, M. (2010). Learning Bayesian Networks with the bnlearn R Package. Journal of Statistical Software,
+35(3), 1-22. URL http://www.jstatsoft.org/v35/i03/.

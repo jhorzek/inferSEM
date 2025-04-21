@@ -1,0 +1,26 @@
+Package: inferSEM
+Type: Package
+Title: Compute Interventional and Conditional Distributions for SEM
+Version: 0.1.0
+Authors@R: c(person(given   = "Jannik H.", family = "Orzek",
+                    role    = c("aut", "cre", "cph"),
+                    email   = "jannik.orzek@mailbox.org",
+                    comment = c(ORCID = "0000-0002-3123-2248")))
+Maintainer: Jannik H. Orzek <jannik.orzek@mailbox.org>
+Description: inferSEM builds on the R package OpenMx for model
+    specification and provides a simple interface to extract the conditional and
+    interventional distributions. The approach is based on results from bnSEM. The
+    package is highly experimental and the results could be wrong. Please use with
+    caution.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    condMVNorm,
+    mxsem,
+    OpenMx
+Suggests: 
+    matrixcalc,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+RoxygenNote: 7.3.2
