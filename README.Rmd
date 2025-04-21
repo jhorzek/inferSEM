@@ -23,14 +23,13 @@ library(mxsem)
 <!-- badges: end -->
 
 inferSEM is an experimental R package for inference on structural equation models
-fitted with OpenMx. The objective is to apply the same ideas used in Bayesian networks
-for inference in SEM.
+fitted with OpenMx.
 
 inferSEM currently only has one user facing function: `infer`. This function allows
-computing the interventional and conditional distributions of SEMs. However,
-it is not really tested yet and the implementation could be wrong. This is just a 
+computing the interventional and conditional distributions of SEMs based on Gische et al. (2022). 
+However, it is not really tested yet and the implementation could be wrong. This is just a 
 small experiment package. For a thorough introduction to interventional and 
-conditional distributions in SEM, please see Gische et al. (2021).
+conditional distributions in SEM, please see Gische et al. (2021) and Gische et al. (2022).
 
 The interventional distribution is computed as follows: Say we intervene by setting
 the value of the variable x2 to 1. In that case:
@@ -41,7 +40,7 @@ of any effects on the intervention variable (x2 in our case). In SEM this also i
 the removal of covariances between x2 and any other variable in the model
 3. The computation of the model implied means and covariances based on the mutilated SEM
 
-The conditional distribution is computed using the R package condMVNorm. If interventional
+The conditional distribution is computed using the R package condMVNorm (Varadhan, 2025). If interventional
 and conditional distribution are combined, inferSEM first computes the interventional
 distribution and then conditions on the additional evidence.
 
@@ -148,5 +147,7 @@ lines(x = x,
 - Gische, C., West, S. G., & Voelkle, M. C. (2021). Forecasting causal effects
 of interventions versus predicting future outcomes. Structural Equation Modeling:
 A Multidisciplinary Journal, 28(3), 475-492.
+- Gische, C., & Voelkle, M. C. (2022). Beyond the mean: A flexible framework for studying causal effects using linear models. psychometrika, 87(3), 868-901.
 - Scutari, M. (2010). Learning Bayesian Networks with the bnlearn R Package. Journal of Statistical Software,
 35(3), 1-22. URL http://www.jstatsoft.org/v35/i03/.
+- Varadhan, R. (2025). condMVNorm: Conditional Multivariate Normal Distribution. R package version 2025.1. https://CRAN.R-project.org/package=condMVNorm
