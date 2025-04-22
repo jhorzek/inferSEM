@@ -11,7 +11,8 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 <!-- badges: end -->
 
 inferSEM is an experimental R package for inference on structural
-equation models fitted with OpenMx.
+equation models fitted with OpenMx. It has similar functionality to
+[causalSEM](https://github.com/christian-gische/causalSEM).
 
 inferSEM currently only has one user facing function: `infer`. This
 function allows computing the interventional and conditional
