@@ -321,7 +321,7 @@ test_that("Test computation of distributions in Gische 2021", {
                     intervene = c("x2" = x2),
                     observe = c(eta_x = z[1], eta_y = z[2]))
 
-  testthat::expect_true(all(abs(Edox2c12[,1] - inferred$means[,colnames(inferred$means) != "x2"]) < 1e-6))
+  testthat::expect_true(all(abs(Edox2c12[,1] - inferred$means[,colnames(inferred$means) != "x2"]) < 1e-4))
   testthat::expect_true(all(abs(Vdox2c12 - inferred$covariances[rownames(inferred$covariances) != "x2",
-                                                                colnames(inferred$covariances) != "x2"]) < 1e-6))
+                                                                colnames(inferred$covariances) != "x2"]) < 1e-4))
 })

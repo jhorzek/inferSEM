@@ -221,20 +221,29 @@ infer <- function(model,
 
   implied <- get_implied(A = A, S = S, M = M)
 
-  if(any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 0) & !is.null(observe)){
-    warning("The implied covariance matrix is not positive definite. The matrix",
-            " will be made positive definite by adding a small constant to the diagonal.")
-    if(any(diag(implied$implied_covariances == 0))){
-      diag(implied$implied_covariances)[diag(implied$implied_covariances) == 0] <- 1e-6
-    }
-    for(i in 1:100){
-      if(!any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 0))
-        break
-      diag(implied$implied_covariances) <- diag(implied$implied_covariances) + 1e-6
-    }
-  }
-
   if(!is.null(observe)){
+    warn <- FALSE
+    if(!is.null(intervene)){
+      warn <- TRUE
+      for(i in names(intervene)){
+        # ensure that the covariance matrix is positive definite
+        S[i,i] <- 1e-6
+      }
+    }
+
+    # condMVN uses a threshold of 1e-08 for eigenvalues
+    if(any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 1e-08)){
+      warn <- TRUE
+      for(i in 1:100){
+        if(!any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 1e-08))
+          break
+        diag(implied$implied_covariances) <- diag(implied$implied_covariances) + 1e-6
+      }
+    }
+    if(warn)
+      warning("The implied covariance matrix is not positive definite. The matrix",
+              " will be made positive definite by adding a small constant to the diagonal.")
+
     conditional <- condMVNorm::condMVN(mean = implied$implied_means,
                                        sigma = implied$implied_covariances,
                                        dependent.ind = which(!variable_names %in% names(observe)),
