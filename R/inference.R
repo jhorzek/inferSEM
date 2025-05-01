@@ -221,7 +221,7 @@ infer <- function(model,
 
   implied <- get_implied(A = A, S = S, M = M)
 
-  if(any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 0)){
+  if(any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 0) & !is.null(observe)){
     warning("The implied covariance matrix is not positive definite. The matrix",
             " will be made positive definite by adding a small constant to the diagonal.")
     if(any(diag(implied$implied_covariances == 0))){
