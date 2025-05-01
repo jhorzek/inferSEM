@@ -66,7 +66,7 @@ check_specification <- function(variable_names, input_vector){
 #' get_ram_matrices_openmx
 #'
 #' Extract RAM matrices from an OpenMx model
-#' @parma model OpenMx model
+#' @param model OpenMx model
 #' @returns list with A, S, and M matrix
 #' @noRd
 get_ram_matrices_openmx <- function(model){
