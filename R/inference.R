@@ -50,18 +50,75 @@ get_implied <- function(A, S, M){
 #'
 #' Checks that the setup was correct.
 #'
-#' @param model OpenMx RAM model
 #' @param variable_names names of the variables in the model
 #' @param input_vector interventional or conditional vector
 #' @returns nothing. Thows error in case of misspecification
 #' @noRd
-check_specification <- function(model, variable_names, input_vector){
+check_specification <- function(variable_names, input_vector){
   if(is.null(names(input_vector)))
     stop("input_vector must be a vector with names.")
   if(any(!names(input_vector) %in% variable_names))
     stop("The following variables were not found in the model: ",
          paste0(names(input_vector)[!names(input_vector) %in% variable_names],
                 collapse = ", "))
+}
+
+#' get_ram_matrices_openmx
+#'
+#' Extract RAM matrices from an OpenMx model
+#' @parma model OpenMx model
+#' @returns list with A, S, and M matrix
+#' @noRd
+get_ram_matrices_openmx <- function(model){
+  return(
+    list(
+      A = model[[model$expectation@A]]$values,
+      S = model[[model$expectation@S]]$values,
+      M = model[[model$expectation@M]]$values
+    )
+  )
+}
+
+#' get_ram_matrices_lavaan
+#'
+#' Extract RAM matrices from a lavaan model
+#' @param model lavaan model
+#' @returns list with A, S, and M matrix
+#' @noRd
+#' @importFrom lavaan lavMatrixRepresentation
+get_ram_matrices_lavaan <- function(model){
+  ram_parameter_table <- lavaan::lavMatrixRepresentation(parTable(model),
+                                                         representation = "RAM")
+  ram_parameter_table$mat <- toupper(ram_parameter_table$mat)
+  if(!"M" %in% ram_parameter_table$mat)
+    stop("Your lavaan model must be estimated with intercepts. Please use meanstructure = TRUE.")
+
+  # Dimensions of the matrices:
+  observed <- model@Model@dimNames[[1]][[1]]
+  if(length(model@Model@dimNames[[1]]) > 1){
+    latent <- model@Model@dimNames[[1]][[2]]
+  }else{
+    latent <- c()
+  }
+  variable_names <- c(observed, latent)
+  n_variables <- length(variable_names)
+
+  ram_matrices <- list(
+    M = matrix(data = 0, nrow = n_variables, ncol = 1, dimnames = list(variable_names, NULL)),
+    A = matrix(data = 0, nrow = n_variables, ncol = n_variables, dimnames = list(variable_names, variable_names)),
+    S = matrix(data = 0, nrow = n_variables, ncol = n_variables, dimnames = list(variable_names, variable_names))
+  )
+
+  for(i in 1:nrow(ram_parameter_table)){
+    if(ram_parameter_table$mat[i] == "")
+      next
+    ram_matrices[[ram_parameter_table$mat[i]]][ram_parameter_table$row[i], ram_parameter_table$col[i]] <- ram_parameter_table$est[i]
+    if(ram_parameter_table$mat[i] == "S")
+      ram_matrices[[ram_parameter_table$mat[i]]][ram_parameter_table$col[i], ram_parameter_table$row[i]] <- ram_parameter_table$est[i]
+  }
+
+  ram_matrices$M <- t(ram_matrices$M)
+  return(ram_matrices)
 }
 
 #' infer
@@ -87,6 +144,7 @@ check_specification <- function(model, variable_names, input_vector){
 #' @returns list with expected means and covariances
 #' @import mxsem
 #' @import OpenMx
+#' @importFrom methods is
 #' @importFrom condMVNorm condMVN
 #' @export
 #' @examples
@@ -95,8 +153,8 @@ check_specification <- function(model, variable_names, input_vector){
 #' model <- '
 #'   # latent variable definitions
 #'      ind60 =~ x1 + x2 + x3
-#'      dem60 =~ y1 + a1*y2 + b*y3 + c1*y4
-#'      dem65 =~ y5 + a2*y6 + b*y7 + c2*y8
+#'      dem60 =~ y1 + a*y2 + b*y3 + c*y4
+#'      dem65 =~ y5 + a*y6 + b*y7 + c*y8
 #'
 #'   # regressions
 #'     dem60 ~ ind60
@@ -128,19 +186,25 @@ infer <- function(model,
                   intervene = NULL,
                   observe = NULL){
 
-  A <- model$A$values
-  S <- model$S$values
-  M <- model$M$values
+  if(is(model, "MxRAMModel")){
+    ram <- get_ram_matrices_openmx(model)
+    A <- ram$A
+    S <- ram$S
+    M <- ram$M
+  }else if(is(model, "lavaan")){
+    ram <- get_ram_matrices_lavaan(model)
+    A <- ram$A
+    S <- ram$S
+    M <- ram$M
+  }
 
   variable_names <- colnames(A)
 
   if(!is.null(intervene))
-    check_specification(model = model,
-                        variable_names = variable_names,
+    check_specification(variable_names = variable_names,
                         input_vector = intervene)
   if(!is.null(observe))
-    check_specification(model = model,
-                        variable_names = variable_names,
+    check_specification(variable_names = variable_names,
                         input_vector = observe)
 
   if(!is.null(intervene)){
@@ -152,14 +216,23 @@ infer <- function(model,
       # Set all variances and covariances with the intervention variable to 0
       S[i, ] <- 0
       S[, i] <- 0
-      # If we want to compute the condintional distrubtion, we have to make
-      # the matrix positive definite
-      if(!is.null(observe))
-        S[i, i] <- 1e-6
     }
   }
 
   implied <- get_implied(A = A, S = S, M = M)
+
+  if(any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 0)){
+    warning("The implied covariance matrix is not positive definite. The matrix",
+            " will be made positive definite by adding a small constant to the diagonal.")
+    if(any(diag(implied$implied_covariances == 0))){
+      diag(implied$implied_covariances)[diag(implied$implied_covariances) == 0] <- 1e-6
+    }
+    for(i in 1:100){
+      if(!any(eigen(implied$implied_covariances, only.values = TRUE)$values <= 0))
+        break
+      diag(implied$implied_covariances) <- diag(implied$implied_covariances) + 1e-6
+    }
+  }
 
   if(!is.null(observe)){
     conditional <- condMVNorm::condMVN(mean = implied$implied_means,

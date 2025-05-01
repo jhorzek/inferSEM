@@ -17,6 +17,8 @@ Encoding: UTF-8
 LazyData: true
 Imports: 
     condMVNorm,
+    lavaan,
+    methods,
     mxsem,
     OpenMx
 Suggests: 
