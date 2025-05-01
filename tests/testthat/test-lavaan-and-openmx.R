@@ -2,6 +2,7 @@ test_that("Comparing lavaan and OpenMx", {
   library(mxsem)
   library(lavaan)
   library(inferSEM)
+  set.seed(2342)
 
   model <- '
   # latent variable definitions
@@ -23,7 +24,7 @@ test_that("Comparing lavaan and OpenMx", {
 
   fit_mx <- mxsem(model = model,
                   data  = OpenMx::Bollen) |>
-    mxTryHard()
+    mxTryHard(exhaustive = TRUE)
 
   fit_lavaan <- sem(model = model,
                     data = OpenMx::Bollen,
@@ -32,8 +33,9 @@ test_that("Comparing lavaan and OpenMx", {
   infer_mx <- inferSEM::infer(model = fit_mx, intervene = c("dem60" = 2))
   infer_lavaan <- inferSEM::infer(model = fit_lavaan, intervene = c("dem60" = 2))
 
-  testthat::expect_true(all(abs(infer_mx$means - infer_lavaan$means[,colnames(infer_mx$means)]) < 1e-3))
-  testthat::expect_true(all(abs(infer_mx$covariances -
-                                  infer_lavaan$covariances[rownames(infer_mx$covariances),
-                                                           colnames(infer_mx$covariances)]) < 1e-3))
+  testthat::expect_lt(max(abs(infer_mx$means -
+                                  infer_lavaan$means[,colnames(infer_mx$means)])), .001)
+  testthat::expect_lt(max(abs(infer_mx$covariances -
+                                infer_lavaan$covariances[rownames(infer_mx$covariances),
+                                                         colnames(infer_mx$covariances)])), .001)
 })

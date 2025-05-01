@@ -86,8 +86,9 @@ get_ram_matrices_openmx <- function(model){
 #' @returns list with A, S, and M matrix
 #' @noRd
 #' @importFrom lavaan lavMatrixRepresentation
+#' @importFrom lavaan parTable
 get_ram_matrices_lavaan <- function(model){
-  ram_parameter_table <- lavaan::lavMatrixRepresentation(parTable(model),
+  ram_parameter_table <- lavaan::lavMatrixRepresentation(lavaan::parTable(model),
                                                          representation = "RAM")
   ram_parameter_table$mat <- toupper(ram_parameter_table$mat)
   if(!"M" %in% ram_parameter_table$mat)
@@ -136,14 +137,13 @@ get_ram_matrices_lavaan <- function(model){
 #' of interventions versus predicting future outcomes. Structural Equation Modeling:
 #' A Multidisciplinary Journal, 28(3), 475-492.
 #'
-#' @param model OpenMX RAM model. The model must have matrices A, S, and M.
+#' @param model OpenMX RAM model or lavaan model
 #' @param intervene named vector with variables on which is intervened and the
 #' respective intervention levels
 #' @param observe named vector with variables for which a specific value is observed
 #' (conditioning)
 #' @returns list with expected means and covariances
 #' @import mxsem
-#' @import OpenMx
 #' @importFrom methods is
 #' @importFrom condMVNorm condMVN
 #' @export

@@ -7,7 +7,7 @@
 infer(model, intervene = NULL, observe = NULL)
 }
 \arguments{
-\item{model}{OpenMX RAM model. The model must have matrices A, S, and M.}
+\item{model}{OpenMX RAM model or lavaan model}
 
 \item{intervene}{named vector with variables on which is intervened and the
 respective intervention levels}
