@@ -95,12 +95,9 @@ get_ram_matrices_lavaan <- function(model){
     stop("Your lavaan model must be estimated with intercepts. Please use meanstructure = TRUE.")
 
   # Dimensions of the matrices:
-  observed <- model@Model@dimNames[[1]][[1]]
-  if(length(model@Model@dimNames[[1]]) > 1){
-    latent <- model@Model@dimNames[[1]][[2]]
-  }else{
-    latent <- c()
-  }
+  observed <- lavaan::lavNames(object = model, type = "ov")
+  latent <- lavaan::lavNames(object = model, type = "lv")
+
   variable_names <- c(observed, latent)
   n_variables <- length(variable_names)
 
